@@ -25,13 +25,13 @@ import javax.mail.Message;
 import javax.mail.Folder;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
+import javax.mail.Store;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.BodyPart;
 import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
@@ -142,7 +142,7 @@ class IMapConnect extends javax.mail.Authenticator {
 		store = session.getStore("imaps");
 		//Connect to server by sending username and password.
 		//Example mailServer = imap.gmail.com, username = abc, password = abc
-		store.connect(mailServer, account.username, account.password);
+		store.connect(mailhost, user, password);
     }
 
     protected PasswordAuthentication getPasswordAuthentication() {
