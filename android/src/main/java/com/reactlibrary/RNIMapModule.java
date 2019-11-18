@@ -54,7 +54,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void connect(final ReadableMap obj, final Promise promise) {
+    public void connect(final ReadableMap obj, final Promise promise) throws Exception {
         AsyncTask.execute(new Runnable() {
 
             String mailhost = obj.getString("mailhost");
@@ -79,7 +79,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 	
 	@ReactMethod
-    public void getMails(final ReadableMap obj, final Promise promise) {
+    public void getMails(final ReadableMap obj, final Promise promise) throws Exception {
         AsyncTask.execute(new Runnable() {
 			String folder = obj.getString("folder");
 			
