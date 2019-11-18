@@ -3,10 +3,12 @@ package com.reactlibrary;
 
 import android.os.AsyncTask;
 import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
@@ -20,6 +22,7 @@ import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 
 import javax.mail.Message;
+import javax.mail.Folder;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
@@ -38,6 +41,7 @@ import javax.mail.internet.MimeMultipart;
 public class RNIMapModule extends ReactContextBaseJavaModule {
 
     private final ReactApplicationContext reactContext;
+	private IMapConnect imapConn;
 
     public RNIMapModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -50,7 +54,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void sendMail(final ReadableMap obj, final Promise promise) {
+    public void connect(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 
             String mailhost = obj.getString("mailhost");
@@ -58,20 +62,11 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
             Boolean ssl = obj.getBoolean("ssl");
             String username = obj.getString("username");
             String password = obj.getString("password");
-            String from = obj.getString("from");
-            String recipients = obj.getString("recipients");
-            ReadableArray bcc = obj.hasKey("bcc") ? obj.getArray("bcc") : null;
-            String subject = obj.getString("subject");
-            String body = obj.getString("htmlBody");
-            ReadableArray attachmentPaths = obj.getArray("attachmentPaths");
-            ReadableArray attachmentNames = obj.getArray("attachmentNames");
-            ReadableArray attachmentTypes = obj.getArray("attachmentTypes");
 
             @Override
             public void run() {
                 try {
-                    MailSender sender = new MailSender(username, password, mailhost, port, ssl);
-                    sender.sendMail(subject, body, from, recipients, bcc, attachmentPaths, attachmentNames, attachmentTypes);
+                    imapConn = new IMapConnect(username, password, mailhost, port, ssl);
 
                     WritableMap success = new WritableNativeMap();
                     success.putString("status", "SUCCESS");
@@ -82,14 +77,37 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
             }
         });
     }
+	
+	@ReactMethod
+    public void getMails(final ReadableMap obj, final Promise promise) {
+        AsyncTask.execute(new Runnable() {
+			String folder = obj.getString("folder");
+			
+            @Override
+            public void run() {
+                try {
+					Message[] messages = imapConn.getMessages(folder);
+
+                    WritableArray promiseArray=Arguments.createArray();
+					for(int i=0;i < messages.length; i++){
+						promiseArray.pushString(messages[i].getSubject());
+					}
+					promise.resolve(promiseArray);
+                } catch (Exception e) {
+                    promise.reject("ERROR", e.getMessage());
+                }
+            }
+        });
+    }
 }
 
-class MailSender extends javax.mail.Authenticator {
+class IMapConnect extends javax.mail.Authenticator {
 
     private String mailhost;
     private String user;
     private String password;
     private Session session;
+	private Store store;
     private String port;
     private Boolean ssl;
     private Multipart _multipart = new MimeMultipart();
@@ -98,95 +116,44 @@ class MailSender extends javax.mail.Authenticator {
         Security.addProvider(new JSSEProvider());
     }
 
-    public MailSender(String user, String password, String mailhost, String port, Boolean ssl) {
+    public IMapConnect(String user, String password, String mailhost, String port, Boolean ssl) {
         this.user = user;
         this.password = password;
         this.mailhost = mailhost;
-
-        Properties props = new Properties();
-        props.setProperty("mail.transport.protocol", "smtp");
-        props.setProperty("mail.host", mailhost);
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.port", port);
-        props.put("mail.smtp.socketFactory.port", port);
-        if (ssl) {
-            props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+		this.port = port;
+		
+		Properties props = new Properties();
+		//IMAPS protocol
+		props.setProperty("mail.store.protocol", "imaps");
+		//Set host address
+		props.setProperty("mail.imaps.host", mailhost);
+		//Set specified port
+		props.setProperty("mail.imaps.port", port);
+		//Using SSL
+		if (ssl) {
+            props.setProperty("mail.imaps.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
         } else {
-            props.put("mail.smtp.starttls.enable", "true");
+            props.setProperty("mail.imaps.starttls.enable", "true");
         }
-        props.put("mail.smtp.socketFactory.fallback", "false");
-        props.setProperty("mail.smtp.quitwait", "false");
+		props.setProperty("mail.imaps.socketFactory.fallback", "false");
+		//Setting IMAP session
+		session = Session.getDefaultInstance(props, null);
 
-        session = Session.getDefaultInstance(props, this);
+		store = session.getStore("imaps");
+		//Connect to server by sending username and password.
+		//Example mailServer = imap.gmail.com, username = abc, password = abc
+		store.connect(mailServer, account.username, account.password);
     }
 
     protected PasswordAuthentication getPasswordAuthentication() {
         return new PasswordAuthentication(user, password);
     }
 
-    public synchronized void sendMail(String subject, String body, String sender, String recipients, ReadableArray bcc,
-          ReadableArray attachmentPaths, ReadableArray attachmentNames, ReadableArray attachmentTypes) throws Exception {
-        MimeMessage message = new MimeMessage(session);
-        Transport transport = session.getTransport();
-        BodyPart messageBodyPart = new MimeBodyPart();
-
-        message.setFrom(new InternetAddress(sender, ""));
-        message.setSubject(subject);
-        message.setSentDate(new Date());
-
-        messageBodyPart.setContent(body, "text/html; charset=utf-8");
-
-        _multipart.addBodyPart(messageBodyPart);
-
-        if (recipients.indexOf(',') > 0) {
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipients));
-        } else {
-            message.setRecipient(Message.RecipientType.TO, new InternetAddress(recipients));
-        }
-
-        if (bcc != null) {
-            for (int i = 0; i < bcc.size(); i++) {
-                message.addRecipients(Message.RecipientType.BCC, bcc.getString(i));
-            }
-        }
-
-        for (int i = 0; i < attachmentPaths.size(); i++) {
-            messageBodyPart = new MimeBodyPart();
-            DataSource source = new FileDataSource(attachmentPaths.getString(i));
-            messageBodyPart.setDataHandler(new DataHandler(source));
-            messageBodyPart.setFileName(attachmentNames.getString(i));
-            if (attachmentTypes.getString(i) == "img") {
-                messageBodyPart.setHeader("Content-ID", "<image>");
-            }
-            _multipart.addBodyPart(messageBodyPart);
-            messageBodyPart = new MimeBodyPart();
-        }
-
-        message.setContent(_multipart);
-        message.saveChanges();
-
-        transport.send(message);
-        transport.close();
-    }
-}
-
-class JSSEProvider extends Provider {
-
-    private static final long serialVersionUID = 1L;
-
-    public JSSEProvider() {
-        super("HarmonyJSSE", 1.0, "Harmony JSSE Provider");
-        AccessController.doPrivileged(new java.security.PrivilegedAction<Void>() {
-            public Void run() {
-                put("SSLContext.TLS",
-                      "org.apache.harmony.xnet.provider.jsse.SSLContextImpl");
-                put("Alg.Alias.SSLContext.TLSv1", "TLS");
-                put("KeyManagerFactory.X509",
-                      "org.apache.harmony.xnet.provider.jsse.KeyManagerFactoryImpl");
-                put("TrustManagerFactory.X509",
-                      "org.apache.harmony.xnet.provider.jsse.TrustManagerFactoryImpl");
-                return null;
-            }
-        });
-    }
+    public Message[] getMessages(String folder) {
+		//Get all mails in Inbox Forlder
+		Folder inbox = store.getFolder(folder);
+		inbox.open(Folder.READ_ONLY);
+		//Return result to array of message
+		return inbox.getMessages();
+	}
 }
