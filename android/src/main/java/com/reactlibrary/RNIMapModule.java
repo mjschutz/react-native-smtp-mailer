@@ -56,7 +56,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getMails(final ReadableMap obj, final Promise promise) {
+    public void connect(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 
             String hostname = obj.getString("hostname");
