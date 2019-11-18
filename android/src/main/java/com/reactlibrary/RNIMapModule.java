@@ -60,7 +60,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
 
             String hostname = obj.getString("hostname");
 			String port = (obj.getType("port") == ReadableType.Number) ? String.valueOf((int)obj.getDouble("port")) : obj.getString("port");
-            Boolean ssl = obj.getBoolean("ssl");
+            Boolean ssl = obj.hasKey("ssl") ? obj.getBoolean("ssl") : false;
             String username = obj.getString("username");
             String password = obj.getString("password");
 
