@@ -59,11 +59,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
         AsyncTask.execute(new Runnable() {
 
             String hostname = obj.getString("hostname");
-			String port = "993";
-			if (readableMap.getType("port") == ReadableType.Number)
-				port = String.valueOf((int)obj.getDouble("port"));
-			else
-				port = obj.getString("port");
+			String port = (readableMap.getType("port") == ReadableType.Number) ? String.valueOf((int)obj.getDouble("port")) : obj.getString("port");
             Boolean ssl = obj.getBoolean("ssl");
             String username = obj.getString("username");
             String password = obj.getString("password");
