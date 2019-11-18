@@ -54,7 +54,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void connect(final ReadableMap obj, final Promise promise) throws Exception {
+    public void connect(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 
             String mailhost = obj.getString("mailhost");
@@ -79,7 +79,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 	
 	@ReactMethod
-    public void getMails(final ReadableMap obj, final Promise promise) throws Exception {
+    public void getMails(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 			String folder = obj.getString("folder");
 			
@@ -116,7 +116,7 @@ class IMapConnect extends javax.mail.Authenticator {
         Security.addProvider(new JSSEProvider());
     }
 
-    public IMapConnect(String user, String password, String mailhost, String port, Boolean ssl) {
+    public IMapConnect(String user, String password, String mailhost, String port, Boolean ssl) throws Exception {
         this.user = user;
         this.password = password;
         this.mailhost = mailhost;
@@ -149,7 +149,7 @@ class IMapConnect extends javax.mail.Authenticator {
         return new PasswordAuthentication(user, password);
     }
 
-    public Message[] getMessages(String folder) {
+    public Message[] getMessages(String folder) throws Exception {
 		//Get all mails in Inbox Forlder
 		Folder inbox = store.getFolder(folder);
 		inbox.open(Folder.READ_ONLY);
