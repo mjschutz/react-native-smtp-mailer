@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableType;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import java.security.AccessController;
@@ -58,7 +59,11 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
         AsyncTask.execute(new Runnable() {
 
             String hostname = obj.getString("hostname");
-            String port = obj.getString("port");
+			String port = "993";
+			if (readableMap.getType("port") == ReadableType.Number)
+				port = Double.toString(obj.getDouble("port"));
+			else
+				port = obj.getString("port");
             Boolean ssl = obj.getBoolean("ssl");
             String username = obj.getString("username");
             String password = obj.getString("password");
