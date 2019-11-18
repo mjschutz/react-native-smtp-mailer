@@ -57,7 +57,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     public void connect(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 
-            String mailhost = obj.getString("mailhost");
+            String hostname = obj.getString("hostname");
             String port = obj.getString("port");
             Boolean ssl = obj.getBoolean("ssl");
             String username = obj.getString("username");
@@ -66,7 +66,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
             @Override
             public void run() {
                 try {
-                    imapConn = new IMapConnect(username, password, mailhost, port, ssl);
+                    imapConn = new IMapConnect(username, password, hostname, port, ssl);
 
                     WritableMap success = new WritableNativeMap();
                     success.putString("status", "SUCCESS");
@@ -103,7 +103,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
 
 class IMapConnect extends javax.mail.Authenticator {
 
-    private String mailhost;
+    private String hostname;
     private String user;
     private String password;
     private Session session;
@@ -116,17 +116,17 @@ class IMapConnect extends javax.mail.Authenticator {
         Security.addProvider(new JSSEProvider());
     }
 
-    public IMapConnect(String user, String password, String mailhost, String port, Boolean ssl) throws Exception {
+    public IMapConnect(String user, String password, String hostname, String port, Boolean ssl) throws Exception {
         this.user = user;
         this.password = password;
-        this.mailhost = mailhost;
+        this.hostname = hostname;
 		this.port = port;
 		
 		Properties props = new Properties();
 		//IMAPS protocol
 		props.setProperty("mail.store.protocol", "imaps");
 		//Set host address
-		props.setProperty("mail.imaps.host", mailhost);
+		props.setProperty("mail.imaps.host", hostname);
 		//Set specified port
 		props.setProperty("mail.imaps.port", port);
 		//Using SSL
@@ -142,7 +142,7 @@ class IMapConnect extends javax.mail.Authenticator {
 		store = session.getStore("imaps");
 		//Connect to server by sending username and password.
 		//Example mailServer = imap.gmail.com, username = abc, password = abc
-		store.connect(mailhost, user, password);
+		store.connect(hostname, user, password);
     }
 
     protected PasswordAuthentication getPasswordAuthentication() {
