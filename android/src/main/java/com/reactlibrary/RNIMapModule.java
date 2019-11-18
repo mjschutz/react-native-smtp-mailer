@@ -50,7 +50,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
 
     @Override
     public String getName() {
-        return "RNIMapModule";
+        return "RNIMap";
     }
 
     @ReactMethod
