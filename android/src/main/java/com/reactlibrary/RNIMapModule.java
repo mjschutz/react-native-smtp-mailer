@@ -23,6 +23,7 @@ import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 
 import javax.mail.Message;
+import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
@@ -55,7 +56,7 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void connect(final ReadableMap obj, final Promise promise) {
+    public void getMails(final ReadableMap obj, final Promise promise) {
         AsyncTask.execute(new Runnable() {
 
             String hostname = obj.getString("hostname");
@@ -91,7 +92,12 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
 
                     WritableArray promiseArray=Arguments.createArray();
 					for(int i=0;i < messages.length; i++){
-						promiseArray.pushString(messages[i].getSubject());
+						WritableMap message = new WritableNativeMap();
+						message.putInt("id", messages[i].getMessageNumber());
+						message.putString("from", messages[i].getFrom().toString());
+						message.putString("subject", messages[i].getSubject());
+						message.putString("content", getTextFromMessage(messages[i]));
+						promiseArray.pushMap(message);
 					}
 					promise.resolve(promiseArray);
                 } catch (Exception e) {
@@ -100,6 +106,35 @@ public class RNIMapModule extends ReactContextBaseJavaModule {
             }
         });
     }
+	
+	private String getTextFromMessage(Message message) throws Exception {
+		String result = "";
+		if (message.isMimeType("text/plain")) {
+			result = message.getContent().toString();
+		} else if (message.isMimeType("multipart/*")) {
+			MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
+			result = getTextFromMimeMultipart(mimeMultipart);
+		}
+		return result;
+	}
+
+	private String getTextFromMimeMultipart(MimeMultipart mimeMultipart) throws Exception {
+		String result = "";
+		int count = mimeMultipart.getCount();
+		for (int i = 0; i < count; i++) {
+			BodyPart bodyPart = mimeMultipart.getBodyPart(i);
+			if (bodyPart.isMimeType("text/plain")) {
+				result = result + "\n" + bodyPart.getContent();
+				break; // without break same text appears twice in my tests
+			} else if (bodyPart.isMimeType("text/html")) {
+				String html = (String) bodyPart.getContent();
+				result = result + "\n" + org.jsoup.Jsoup.parse(html).text();
+			} else if (bodyPart.getContent() instanceof MimeMultipart){
+				result = result + getTextFromMimeMultipart((MimeMultipart)bodyPart.getContent());
+			}
+		}
+		return result;
+	}
 }
 
 class IMapConnect extends javax.mail.Authenticator {
